@@ -17,3 +17,4 @@ da <- read.csv("ATLANTIC_BIRDS_quantitative.csv", encoding = "latin1")
 da
 # conferir a classe
 class(da)
+
