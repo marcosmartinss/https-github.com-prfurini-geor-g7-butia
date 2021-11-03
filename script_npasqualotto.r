@@ -11,7 +11,6 @@ library(sf)
 
 # Lendo os dados de occorrencia das spp ------------------------------------------------------------------
 atlantic.birds <- read.csv("ATLANTIC_BIRDS_quantitative.csv")
-
 head(atlantic.birds)
 dim(atlantic.birds)
 str(atlantic.birds)
@@ -24,5 +23,3 @@ head(atlantic.birds)
 dim(atlantic.birds)
 
 sort(unique(atlantic.birds$Municipality))
-
-dim(atlantic.birds[atlantic.birds$Municipality == "GÁLIA" & atlantic.birds$Municipality == "GAR+çA", ])
