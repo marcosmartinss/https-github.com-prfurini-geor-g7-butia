@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:ns2="http://www.google.com/kml/ext/2.2" xmlns:ns3="http://www.w3.org/2005/Atom" xmlns:ns4="urn:oasis:names:tc:ciq:xsdschema:xAL:2.0">
+    <Document>
+        <LookAt>
+            <longitude>-47.48569278458638</longitude>
+            <latitude>-23.355824649961136</latitude>
+            <altitude>949214.2851845011</altitude>
+            <heading>0.0</heading>
+            <tilt>0.0</tilt>
+            <range>767014.9303038203</range>
+            <altitudeMode>clampToGround</altitudeMode>
+        </LookAt>
+        <NetworkLink>
+            <name>Unidades de Conservação Estaduais - Uso Sustentável</name>
+            <visibility>1</visibility>
+            <open>1</open>
+            <LookAt>
+                <longitude>-47.465914213257264</longitude>
+                <latitude>-23.35692257582909</latitude>
+                <altitude>1116652.884626084</altitude>
+                <heading>0.0</heading>
+                <tilt>0.0</tilt>
+                <range>902314.101086835</range>
+                <altitudeMode>clampToGround</altitudeMode>
+            </LookAt>
+            <Url>
+                <href>https://datageo.ambiente.sp.gov.br/geoserver/datageowms/wms?service=wms&amp;request=GetMap&amp;version=1.1.1&amp;format=application/vnd.google-earth.kml+xml&amp;layers=datageowms:UCS_ESTADUAIS_US_SP_POL&amp;styles=STI_WMS_UCS_US&amp;height=2048&amp;width=2048&amp;transparent=false&amp;srs=EPSG:4326&amp;format_options=AUTOFIT:true;KMATTR:true;KMPLACEMARK:false;KMSCORE:40;MODE:refresh;SUPEROVERLAY:false</href>
+                <refreshInterval>0.0</refreshInterval>
+                <viewRefreshMode>onStop</viewRefreshMode>
+                <viewRefreshTime>1.0</viewRefreshTime>
+                <viewBoundScale>1.0</viewBoundScale>
+            </Url>
+        </NetworkLink>
+    </Document>
+</kml>
