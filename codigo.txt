@@ -1,0 +1,9 @@
+git@github.com:npasqualotto/https-github.com-prfurini-geor-g7-butia.git
+git add -Av
+git commit -m " "
+Nielson Pasqualotto10:48
+git push -u origin master
+Felipe Soares Bufalo10:49
+git config pull.rebase false
+git config pull.rebase true
+git config pull.ff only
