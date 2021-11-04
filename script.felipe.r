@@ -1,28 +1,38 @@
-
-# Pacotes ----------------------------------------------------------------
+# Pacotes ----------------------------------------------------------------------
 library(tidyverse)
 library(here)
 library(sp)
 library(sf)
 library(spatialEco)
 library(plotly)
+library(raster)
+library(spatstat)
 
-# Dados de ocorrencia das spp de ave --------------------------------------
-
-# atlantic.birds <- readr::read_csv(
-#   here::here("ATLANTIC_BIRDS_quantitative.csv"))
-atlantic.birds <- read.csv("ATLANTIC_BIRDS_quantitative.csv")
+# Carregando de ocorrencia das spp de aves -------------------------------------
+atlantic.birds <- read.csv(here::here("ATLANTIC_BIRDS_quantitative.csv"))
 
 head(atlantic.birds)
 dim(atlantic.birds)
 
+# Riqueza de spp de aves em cada coordenada ------------------------------------
+# Agrupar a riqueza das spp de ave por ponto de amostragem
+atlantic.birds_group_latlong <- atlantic.birds %>% 
+  dplyr::group_by(Latitude_y, Longitude_x) %>% 
+  dplyr::summarise(riqueza = n())
+print(atlantic.birds_group_latlong, n= 10)
+
+# juncao de tabela de atributos
+atlantic.birds.riqueza <- dplyr::left_join(atlantic.birds, atlantic.birds_group_latlong, by = "Latitude_y","Longitude_x")
+atlantic.birds.riqueza
+dim(atlantic.birds.riqueza)
+
+# Objeto espacial, reprojetacao e filtro para area de estudo (SP) --------------
 
 # criando objeto espacial com o pacote sf 
-atlantic.birds.points <- atlantic.birds %>% 
+colnames(atlantic.birds.riqueza)[5] <- "Longitude_x"
+atlantic.birds.points <- atlantic.birds.riqueza %>% 
   sf::st_as_sf(coords = c("Longitude_x", "Latitude_y"), crs = 4326)
-
 atlantic.birds.points
-dim(atlantic.birds.points)
 
 # converter sistema de coordenadas dos dados das especies para SIRGAS 2000
 atlantic.birds.points <- sf::st_transform(atlantic.birds.points, crs = 5880)
@@ -51,17 +61,15 @@ sp <- br_2020 %>%
   dplyr::filter(abbrev_state == "SP")
 sp
 
-# Amostra aleatoria com limite de distancia ------------------------------
+# Amostra aleatoria com limite de distancia ------------------------------------
 
 # selecionando aleatoriamente 150 pontos, distantes entre si por pelo menos 5 km
 set.seed(5)
 atlantic.birds.sp.sample <- subsample.distance(as_Spatial(atlantic.birds.sp), size = 150, d = 5000, replacement = FALSE, echo=T)
 atlantic.birds.sp.sample
 
-
-# Explorando a distribuicao dos pontos aleatorios ----
+# Explorando a distribuicao dos pontos aleatorios ------------------------------
 # criando objeto da classe "owin"
-library(spatstat)
 sp_win <- as.owin(sp)
 plot(sp_win)
 
@@ -119,7 +127,7 @@ tm_shape(kernel_diggle) +
 L_inhom <- envelope(atlantic.birds.sp.sample.ppp, 
                     Linhom, 
                     nsim = 50) # quanto maior mais demora +- 40 seg com 50
-                     
+
 L_inhom # com esse tamanho de ppp, 50 simulacoes dao significancia de .04
 
 # plot: 
@@ -137,16 +145,75 @@ plot(L_inhom, . -r ~ r, legend = FALSE)
 # plot para visualizarmos os pontos -> + pontos em algumas areas
 plot(atlantic.birds.sp.sample.ppp)
 
-# Plot area de estudo, dados de ocorrencia ------------------------------
+# df com dados de riqueza para cada uma das 150 amostras -----------------------
+
 # convertendo o objeto sp para sf
 atlantic.birds.sp.sample <- st_as_sf(atlantic.birds.sp.sample)
 head(atlantic.birds.sp.sample)
 
-plot(sp$geom, pch = 20, main = NA, axes = TRUE, graticule = TRUE) # area de estudo
-plot(atlantic.birds.sp$geometry, pch = 20, main = NA, axes = TRUE, graticule = TRUE, add= TRUE) # pontos com ocorrencia das spp
+# criando df com dados de interesse
+df.riq <- as.data.frame(atlantic.birds.sp.sample)
+df.riq <- df.riq[, c(1, 25)]
+head(df.riq, 20)
 
-# plotando a amostra aleatoria dos pontos
-plot(atlantic.birds.sp.sample$geometry, pch = 20, main = NA, axes = TRUE, graticule = TRUE, add= TRUE, col= "red")
+# Dist pontos amostra aleatoria a UC mais proxima ------------------------------
+# Camada de UCs
+uc <- sf::st_read(here::here("UCs.shp"), quiet = TRUE)
+uc
+
+# converter sistema de coordenadas dos dados das ucs para SIRGAS 2000
+uc <- sf::st_transform(uc, crs = 5880)
+uc
+
+# calcular distancia das UCS
+uc_cast <- uc %>% 
+  dplyr::st_cast("POLYGON")
+uc_cast
+
+ab_sample_dist_uc <- atlantic.birds.sp.sample %>% 
+  dplyr::mutate(dist_uc = sf::st_distance(atlantic.birds.sp.sample, uc))
+dim(ab_sample_dist_uc$dist_uc)
+
+# % florestal (IF_2020) em cada ponto da amostra aleatoria  --------------------
+
+# Carregando shapefile como sf
+IFlor <- sf::st_read(here::here("InventarioFlorestal2020.shp"), quiet = TRUE, options = "ENCODING=WINDOWS-1252")
+IFlor
+
+# Removendo classes de cobertura não florestais
+unique(IFlor$FITOFISION)
+
+IFlor_filt <- IFlor %>% 
+  dplyr::filter(FITOFISION %in% c("Floresta Ombrófila Densa", "Floresta Estacional Semidecidual",
+                                  "Floresta Ombrófila Mista", "Savana Florestada", 
+                                  "Floresta Ombrófila Densa das Terras Baixas", "Floresta Estacional Decidual"))
+IFlor_filt
+
+# Reprojetando 
+IFlor_filt <- sf::st_transform(IFlor_filt, crs = 5880)
+
+# Add id para floresta
+IFlor_filt <- IFlor_filt %>% 
+  dplyr::mutate(id_floresta = rep(1, length(IFlor_filt$FITOFISION)))
+IFlor_filt
+
+# Rasterizar os poligonos 
+IFlor_rast <- fasterize::fasterize(sf = IFlor_filt, raster = , field = "1")
+IFlor_rast
+
+# plot
+# plot(IFlor_rast, col = viridis::viridis(10))
+# plot(atlantic.birds.sp.sample$geom, add = TRUE)
+
+# Quantificar % floresta em buffers de 3 km ao redor das amostras
+
+
+# Plot area de estudo, dados de ocorrencia -------------------------------------
+
+plot(sp$geom, pch = 20, main = NA, axes = TRUE, graticule = TRUE) # area de estudo
+plot(uc$geometry, col = "green", main = NA, axes = TRUE, graticule = TRUE, add= TRUE)# UCs
+plot(atlantic.birds.sp$geometry, pch = 20, main = NA, axes = TRUE, graticule = TRUE, add= TRUE) # pontos com ocorrencia das spp
+plot(atlantic.birds.sp.sample$geometry, pch = 20, main = NA, axes = TRUE, graticule = TRUE, add= TRUE, col= "red") # amostra aleatoria
 
 # plot interativo (zoom)
 map_rc_2020_plotly_int <- ggplotly(
@@ -157,22 +224,16 @@ map_rc_2020_plotly_int <- ggplotly(
     theme_bw(base_size = 16))
 map_rc_2020_plotly_int
 
+# Input GLM --------------------------------------------------------------------
 
-mapview::mapview(atlantic.birds.sp.sample)
+# df final 
+df.riq
 
-# Riqueza de spp de aves pontos da amostra aleatoria ---------------------
-atlantic.birds
+# GLM
+(mod_null <- glm(riqueza ~ 1, family = "poisson", data = df.riq))
 
-atlantic.birds_group_lat <- atlantic.birds %>% 
-  dplyr::group_by(Latitude_y, Longitude_x) %>% 
-  dplyr::summarise(riqueza = n())
-print(atlantic.birds_group_lat, n= 230)
+(mod_dist_ucs <- glm(riqueza ~ Dist_UCs, family = "poisson", data = df.riq))
 
-# fazer o join
+(mod_dist_fl <- glm(riqueza ~ Porc_flor, family = "poisson", data = df.riq))
 
-
-# % florestal (IF_2020) em cada ponto da amostra aleatoria  --------------
-
-# Dist pontos amostra aleatoria a UC mais proxima ------------------------
-
-# Input GLM --------------------------------------------------------------
+(mod_dist_int <- glm(riqueza ~ Dist_UCs*Porc_flor, family = "poisson", data = df.riq))
