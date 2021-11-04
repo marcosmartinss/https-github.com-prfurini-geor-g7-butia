@@ -93,16 +93,21 @@ plot(atlantic.birds.sp.sample.ppp)
 kernel <- density.ppp(atlantic.birds.sp.sample.ppp, 
                       sigma = 15000, 
                       edge = FALSE) # sigma arbitrario (subjetivo)
-plot(kernel)
+
+plot(kernel, main = "Density distribution of sampling points")
+
 
 # criando kernel utilizando abordagens estatisticas
 # usei bandwidth de diggle (1989) por nao suavisar demais a densidade
 raio_diggle <- bw.diggle(atlantic.birds.sp.sample.ppp)
 
+
 kernel_diggle <- density.ppp(atlantic.birds.sp.sample.ppp, 
                              sigma = raio_diggle)
 # plot
-plot(kernel_diggle, main = "raio baseado em Diggle 1989")
+#png(filename = here::here("kernel1.png"), width = 20, height = 20, units = "cm", res = 300)
+plot(kernel_diggle, main = "Densidade de distribuição dos pontos de amostragem - Diggle 1989")
+#dev.off()
 
 # convertendo kernel para raster 
 kernel_diggle <- raster(kernel_diggle)
@@ -119,8 +124,8 @@ tm_shape(kernel_diggle) +
   tm_borders() +
   tm_legend(legend.outside = T) +
   tm_graticules(lwd = 0) + 
-  tm_layout(main.title = "Pontos de amostragem Atlantic Birds SP")
-#tmap_save(filename = "./img/kernel.png")
+  tm_layout(main.title = "Densidade de pontos de amostragem Atlantic Birds SP")
+#tmap_save(filename = "kernel1.png")
 
 # Teste de padroes de distribuicao ----
 # qual o padrao de distribuicao dos pontos de amostragem em sp?
@@ -137,7 +142,10 @@ L_inhom # com esse tamanho de ppp, 50 simulacoes dao significancia de .04
 # valores positivos indicam padrao nao homogeneo (agrupacao)
 # valores negativos indicam padrao homogeneo de distribuicao
 # sombra cinza indica intervalo de confianca (.04)
-plot(L_inhom, . -r ~ r, legend = FALSE) 
+
+#png(filename = here::here("L_inhom.png"), width = 20, height = 20, units = "cm", res = 300)
+plot(L_inhom, . -r ~ r, legend = FALSE, main="Padrão de distribuição dos pontos - Inhomogeneous L-function") 
+#dev.off()
 
 ## entre ~10 km e  ~70 km de distancia os pontos apresentam distribuicao 
 ## nao homogenea (agregada)
