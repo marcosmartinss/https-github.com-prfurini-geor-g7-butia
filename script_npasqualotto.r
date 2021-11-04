@@ -6,7 +6,7 @@ library(sf)
 library(spatialEco)
 library(plotly)
 
-# Carregando dados de ocorrencia das spp de ave ----------------------------
+# Dados de ocorrencia das spp de ave --------------------------------------
 
 # atlantic.birds <- readr::read_csv(
 #   here::here("ATLANTIC_BIRDS_quantitative.csv"))
@@ -78,6 +78,11 @@ map_rc_2020_plotly_int <- ggplotly(
     theme_bw(base_size = 16))
 map_rc_2020_plotly_int
 
-# Carregar dados cobertura florestal IF_2020 ------------------------------
+# Riqueza de spp de aves pontos da amostra aleatoria ---------------------
 
 
+# % florestal (IF_2020) em cada ponto da amostra aleatoria  --------------
+
+# Dist pontos amostra aleatoria a UC mais proxima ------------------------
+
+# Input GLM --------------------------------------------------------------
