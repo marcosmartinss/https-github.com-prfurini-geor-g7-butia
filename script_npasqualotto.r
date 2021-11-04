@@ -1,6 +1,7 @@
 
 # Pacotes ----------------------------------------------------------------
 library(tidyverse)
+library(here)
 library(sp)
 library(sf)
 library(spatialEco)
@@ -10,11 +11,11 @@ library(plotly)
 
 # atlantic.birds <- readr::read_csv(
 #   here::here("ATLANTIC_BIRDS_quantitative.csv"))
-atlantic.birds <- read.csv(
-  here::here("ATLANTIC_BIRDS_quantitative.csv"))
+atlantic.birds <- read.csv("ATLANTIC_BIRDS_quantitative.csv")
 
 head(atlantic.birds)
 dim(atlantic.birds)
+
 
 # criando objeto espacial com o pacote sf 
 atlantic.birds.points <- atlantic.birds %>% 
@@ -78,7 +79,18 @@ map_rc_2020_plotly_int <- ggplotly(
     theme_bw(base_size = 16))
 map_rc_2020_plotly_int
 
+
+mapview::mapview(atlantic.birds.sp.sample)
+
 # Riqueza de spp de aves pontos da amostra aleatoria ---------------------
+atlantic.birds
+
+atlantic.birds_group_lat <- atlantic.birds %>% 
+  dplyr::group_by(Latitude_y, Longitude_x) %>% 
+  dplyr::summarise(riqueza = n())
+print(atlantic.birds_group_lat, n= 230)
+
+# fazer o join
 
 
 # % florestal (IF_2020) em cada ponto da amostra aleatoria  --------------
