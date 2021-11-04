@@ -59,7 +59,7 @@ atlantic.birds.sp.sample <- subsample.distance(as_Spatial(atlantic.birds.sp), si
 atlantic.birds.sp.sample
 
 
-# Explorando distribuicao dos pontos aleatorios ----
+# Explorando a distribuicao dos pontos aleatorios ----
 # criando objeto da classe "owin"
 library(spatstat)
 sp_win <- as.owin(sp)
@@ -111,8 +111,7 @@ tm_shape(kernel_diggle) +
   tm_layout(main.title = "Pontos de amostragem Atlantic Birds SP")
 #tmap_save(filename = "./img/kernel.png")
 
-# Exploracao da distribuicao dos pontos de amostragem em SP ----
-
+# Teste de padroes de distribuicao ----
 # qual o padrao de distribuicao dos pontos de amostragem em sp?
 # ja que aparentemente nossos pontos tem distribuicao nao homogenea:
 # L-function for IPP (distribuicao nao-homogenea dos pontos)
