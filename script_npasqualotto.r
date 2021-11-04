@@ -12,6 +12,8 @@ library(tmap)
 library(fasterize)
 library(landscapemetrics)
 library(MuMIn)
+library(ggplot2)
+library(ggspatial)
 
 # Carregando de ocorrencia das spp de aves -------------------------------------
 atlantic.birds <- read.csv(here::here("ATLANTIC_BIRDS_quantitative.csv"))
@@ -236,6 +238,38 @@ plot(atlantic.birds.sp$geometry, pch = 20, main = NA, axes = TRUE, graticule = T
 plot(atlantic.birds.sp.sample$geometry, pch = 20, main = NA, axes = TRUE, graticule = TRUE, add= TRUE, col= "red") # amostra aleatoria
 dev.off()
 
+# Plot com escala e norte usando ggplot2
+# dados
+IFlor_rast_da <- raster::rasterToPoints(IFlor_rast) %>% 
+  tibble::as_tibble()
+head(IFlor_rast_da)
+
+map <- ggplot() +
+  geom_tile(data = IFlor_rast_da, aes(x = x, y = y), fill= "dark green") +
+  geom_sf(data = sp, col = "black", fill = NA, size = 1) +
+  geom_sf(data = uc, col = "black", fill = NA, size = 0.5) +
+  geom_sf(data = atlantic.birds.sp, col = "black", fill = NA, size = 1) +
+  geom_sf(data = atlantic.birds.sp.sample, col = "red", fill = NA, size = 1) +
+  coord_sf() +
+  theme_bw(base_size = 15) +
+  theme(legend.title = element_text(size = 15, face = "bold"),
+        legend.position = c(.2, .2),
+        legend.background = element_rect(colour = "black")) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.background = element_blank()) + 
+  annotation_scale(location = "br",
+                   pad_x = unit(.5, "cm"), pad_y = unit(.7, "cm"),) +
+  annotation_north_arrow(location = "br", which_north = "true",
+                         pad_x = unit(.4, "cm"), pad_y = unit(1.3, "cm"),
+                         style = north_arrow_fancy_orienteering) +
+  annotate(geom = "text", label = "CRS: SIRGAS2000/Brazil Polyconic", x = 5254523, y = 7180921, size = 3) +
+  labs(title = "Pontos de amostragem de aves em São Paulo")
+
+png(filename = here::here("mapa_ggplot.png"), width = 20, height = 20, units = "cm", res = 300)
+map 
+dev.off()
+
 # plot interativo (zoom)
 map_rc_2020_plotly_int <- ggplotly(
   ggplot() +
@@ -259,6 +293,10 @@ df.riq.pad <- df.riq
 df.riq.pad$dist_uc_min <- as.vector(scale(df.riq.pad$dist_uc_min))
 df.riq.pad$Porc_fl <- as.vector(scale(df.riq.pad$Porc_fl))
 
+# Removendo valor atipico de riqueza
+df.riq.pad <- df.riq.pad[-32,]
+df.riq2 <- df.riq[-32,]
+
 # GLM
 summary(mod_null <- glm(riqueza ~ 1, family = "poisson", data = df.riq.pad))
 
@@ -268,9 +306,23 @@ plot(mod_dist_ucs)
 
 summary((mod_dist_fl <- glm(riqueza ~ Porc_fl, family = "poisson", data = df.riq.pad)))
 confint(mod_dist_fl)
-
-summary(mod_dist_int <- glm(riqueza ~ dist_uc_min*Porc_fl, family = "poisson", data = df.riq.pad))
-confint(mod_dist_int)
+plot(mod_dist_fl)
 
 # Selecao de modelos
 model.sel(mod_null, mod_dist_ucs, mod_dist_fl)
+
+# Plot dos valores preditos
+pred_fig <- ggplot(df.riq2, aes(dist_uc_min, riqueza)) +
+  geom_point() +
+  geom_smooth(method = "glm", se = FALSE,
+              method.args = list(family = "poisson")) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(), 
+        panel.background = element_blank(), 
+        axis.line = element_line(colour = "black")) +
+  labs(y="Riqueza de especies de aves \n")+
+  labs(x="\n Distancia para a UC mais proxima (m)")
+
+png(filename = here::here("pred_ggplot.png"), width = 20, height = 20, units = "cm", res = 300)
+pred_fig 
+dev.off()
