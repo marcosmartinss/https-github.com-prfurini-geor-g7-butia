@@ -98,3 +98,7 @@ print(atlantic.birds_group_lat, n= 230)
 # Dist pontos amostra aleatoria a UC mais proxima ------------------------
 
 # Input GLM --------------------------------------------------------------
+
+
+atlantic.birds.riqueza <- dplyr::left_join(atlantic.birds, atlantic.birds_group_lat, by = "Latitude_y","Longitude_x")
+atlantic.birds.riqueza 
