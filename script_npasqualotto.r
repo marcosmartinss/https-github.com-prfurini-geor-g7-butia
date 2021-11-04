@@ -8,6 +8,10 @@ library(spatialEco)
 library(plotly)
 library(raster)
 library(spatstat)
+library(tmap)
+library(fasterize)
+library(landscapemetrics)
+library(MuMIn)
 
 # Carregando de ocorrencia das spp de aves -------------------------------------
 atlantic.birds <- read.csv(here::here("ATLANTIC_BIRDS_quantitative.csv"))
@@ -97,11 +101,10 @@ raio_diggle <- bw.diggle(atlantic.birds.sp.sample.ppp)
 
 kernel_diggle <- density.ppp(atlantic.birds.sp.sample.ppp, 
                              sigma = raio_diggle)
-#plot
+# plot
 plot(kernel_diggle, main = "raio baseado em Diggle 1989")
 
 # convertendo kernel para raster 
-library(raster)
 kernel_diggle <- raster(kernel_diggle)
 class(kernel_diggle)
 
@@ -109,7 +112,6 @@ class(kernel_diggle)
 crs(kernel_diggle) <- crs(atlantic.birds.sp.sample)
 
 # Plot mais interessante
-library(tmap)
 tmap_mode("plot")
 tm_shape(kernel_diggle) +
   tm_raster(title = '', style = "fisher") +
@@ -152,11 +154,6 @@ plot(atlantic.birds.sp.sample.ppp)
 atlantic.birds.sp.sample <- st_as_sf(atlantic.birds.sp.sample)
 head(atlantic.birds.sp.sample)
 
-# criando df com dados de interesse
-df.riq <- as.data.frame(atlantic.birds.sp.sample)
-df.riq <- df.riq[, c(1, 25)]
-head(df.riq, 20)
-
 # Dist pontos amostra aleatoria a UC mais proxima ------------------------------
 # Camada de UCs
 uc <- sf::st_read(here::here("UCs.shp"), quiet = TRUE)
@@ -166,14 +163,20 @@ uc
 uc <- sf::st_transform(uc, crs = 5880)
 uc
 
-# calcular distancia das UCS
-uc_cast <- uc %>% 
-  dplyr::st_cast("POLYGON")
-uc_cast
-
+# calcular distancia para todas as UCs
 ab_sample_dist_uc <- atlantic.birds.sp.sample %>% 
-  dplyr::mutate(dist_uc = sf::st_distance(atlantic.birds.sp.sample, uc_cast))
-dim(ab_sample_dist_uc$dist_uc)
+  dplyr::mutate(dist_uc = sf::st_distance(atlantic.birds.sp.sample, uc))
+ab_sample_dist_uc$dist_uc 
+
+# Dist da UC mais proxima
+min_dist <- rep(as.numeric(NA), 150)
+for( i in 1:dim(ab_sample_dist_uc$dist_uc)[1]) {
+  min_dist[i] <- min(ab_sample_dist_uc$dist_uc[i,])
+}
+
+ab_sample_dist_uc <- ab_sample_dist_uc %>% 
+  dplyr::mutate(dist_uc_min = min_dist)
+ab_sample_dist_uc
 
 # % florestal (IF_2020) em cada ponto da amostra aleatoria  --------------------
 
@@ -198,23 +201,40 @@ IFlor_filt <- IFlor_filt %>%
   dplyr::mutate(id_floresta = rep(1, length(IFlor_filt$FITOFISION)))
 IFlor_filt
 
-# Rasterizar os poligonos 
-IFlor_rast <- fasterize::fasterize(sf = IFlor_filt, raster = , field = "1")
+# Rasterizar os poligonos
+rast_init <- raster::raster(IFlor_filt, crs = 5880, resolution= 1000)
+IFlor_rast <- fasterize::fasterize(sf = IFlor_filt, raster = rast_init, field = "id_floresta")
 IFlor_rast
 
-# plot
-# plot(IFlor_rast, col = viridis::viridis(10))
-# plot(atlantic.birds.sp.sample$geom, add = TRUE)
+# Quantificar % floresta em buffers de 3 km com landscape metrics
 
-# Quantificar % floresta em buffers de 3 km ao redor das amostras
+## Checar adequabilidade do raster
+check_landscape(IFlor_rast)
 
+pfl <- sample_lsm(IFlor_rast, y = ab_sample_dist_uc, plot_id = ab_sample_dist_uc$Record_id, 
+                        shape = "circle", size = 3000, progress = T,
+                        what = "lsm_c_pland")
+
+pfl
+print(pfl, n =150)
+
+# juntando % floresta com demais dados
+# juncao de tabela de atributos
+colnames(pfl)[7] <- "Record_id"
+colnames(pfl)[8] <- "Porc_fl"
+pfl
+
+atlantic.birds.all <- dplyr::left_join(ab_sample_dist_uc, pfl, by = "Record_id")
+atlantic.birds.all
 
 # Plot area de estudo, dados de ocorrencia -------------------------------------
-
-plot(sp$geom, pch = 20, main = NA, axes = TRUE, graticule = TRUE) # area de estudo
-plot(uc$geometry, col = "green", main = NA, axes = TRUE, graticule = TRUE, add= TRUE)# UCs
+png(filename = here::here("mapa.png"), width = 20, height = 20, units = "cm", res = 300)
+plot(IFlor_rast, col = "dark green", legend= F)
+plot(sp$geom, pch = 20, main = NA, axes = TRUE, graticule = TRUE, add= TRUE) # area de estudo
+plot(uc$geometry, col = NULL, border = "black", main = NA, axes = TRUE, graticule = TRUE, add= TRUE)# UCs
 plot(atlantic.birds.sp$geometry, pch = 20, main = NA, axes = TRUE, graticule = TRUE, add= TRUE) # pontos com ocorrencia das spp
 plot(atlantic.birds.sp.sample$geometry, pch = 20, main = NA, axes = TRUE, graticule = TRUE, add= TRUE, col= "red") # amostra aleatoria
+dev.off()
 
 # plot interativo (zoom)
 map_rc_2020_plotly_int <- ggplotly(
@@ -227,14 +247,30 @@ map_rc_2020_plotly_int
 
 # Input GLM --------------------------------------------------------------------
 
-# df final 
-df.riq
+# criando df com dados de interesse
+df.riq <- as.data.frame(atlantic.birds.all)
+names(atlantic.birds.all)
+df.riq <- df.riq[, c(1, 25, 27, 34)]
+head(df.riq, 20)
+
+# Padronizando as variaveis
+## Standardising covariates
+df.riq.pad <- df.riq
+df.riq.pad$dist_uc_min <- as.vector(scale(df.riq.pad$dist_uc_min))
+df.riq.pad$Porc_fl <- as.vector(scale(df.riq.pad$Porc_fl))
 
 # GLM
-(mod_null <- glm(riqueza ~ 1, family = "poisson", data = df.riq))
+summary(mod_null <- glm(riqueza ~ 1, family = "poisson", data = df.riq.pad))
 
-(mod_dist_ucs <- glm(riqueza ~ Dist_UCs, family = "poisson", data = df.riq))
+summary(mod_dist_ucs <- glm(riqueza ~ dist_uc_min, family = "poisson", data = df.riq.pad))
+confint(mod_dist_ucs)
+plot(mod_dist_ucs)
 
-(mod_dist_fl <- glm(riqueza ~ Porc_flor, family = "poisson", data = df.riq))
+summary((mod_dist_fl <- glm(riqueza ~ Porc_fl, family = "poisson", data = df.riq.pad)))
+confint(mod_dist_fl)
 
-(mod_dist_int <- glm(riqueza ~ Dist_UCs*Porc_flor, family = "poisson", data = df.riq))
+summary(mod_dist_int <- glm(riqueza ~ dist_uc_min*Porc_fl, family = "poisson", data = df.riq.pad))
+confint(mod_dist_int)
+
+# Selecao de modelos
+model.sel(mod_null, mod_dist_ucs, mod_dist_fl)
