@@ -78,6 +78,22 @@ atlantic.birds.sp.sample
 sp_win <- as.owin(sp)
 plot(sp_win)
 
+# explorando ditribuicao dos pontos totais
+# convertendo todos os pontos para spatial points data frame
+atlantic.birds.sp.spdf <- as_Spatial(atlantic.birds.sp)
+
+# convertendo todos os pontos para classe ppp
+atlantic.birds.sp.ppp <- ppp(
+  atlantic.birds.sp.spdf@coords[,1], 
+  atlantic.birds.sp.spdf@coords[,2], 
+  window = sp_win)
+class(atlantic.birds.sp.ppp)
+
+# plot para visualizacao de todos os pontos
+#png(filename = here::here("amostragem_total.png"), width = 20, height = 20, units = "cm", res = 300)
+plot(atlantic.birds.sp.ppp, main = "Amostragem SP (n = 349)")
+#dev.off()
+
 # construindo objeto da classe "ppp"
 atlantic.birds.sp.sample.ppp <- ppp(
   atlantic.birds.sp.sample@coords[,1], 
